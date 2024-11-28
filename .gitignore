@@ -1,0 +1,10 @@
+.idea
+.venv
+.vscode
+logs4
+res
+__pycache__
+output
+# data/**/*.txt 
+data
+.conda
