@@ -5,6 +5,5 @@ logs4
 res
 __pycache__
 output
-# data/**/*.txt 
-data
+# data
 .conda
