@@ -4,12 +4,12 @@ import transformers
 import data
 
 
-physical_devices = tf.config.list_physical_devices('GPU')
-if len(physical_devices) > 0:
-    print(physical_devices[0])
-    tf.config.experimental.set_memory_growth(physical_devices[0], True) 
-else:
-    exit(0)
+# physical_devices = tf.config.list_physical_devices('GPU')
+# if len(physical_devices) > 0:
+#     print(physical_devices[0])
+#     tf.config.experimental.set_memory_growth(physical_devices[0], True) 
+# else:
+#     exit(0)
     
 # %%
 import os
