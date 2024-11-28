@@ -3,9 +3,18 @@ import tensorflow as tf
 import transformers
 import data
 
+
+physical_devices = tf.config.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    print(physical_devices[0])
+    tf.config.experimental.set_memory_growth(physical_devices[0], True) 
+else:
+    exit(0)
+    
 # %%
 import os
-os.environ['TF_GPU_ALLOCATOR']="cuda_malloc_async"
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # %%
 model_name = "FacebookAI/roberta-base"
@@ -51,13 +60,13 @@ roberta_outputs = roberta_model(input_ids=input_ids, attention_mask=attention_ma
 
 # print(roberta_outputs)
 
-tf.config.run_functions_eagerly(True)
-tf.keras.mixed_precision.set_global_policy("mixed_float16")
+# tf.config.run_functions_eagerly(True)
+# tf.keras.mixed_precision.set_global_policy("mixed_float16")
 tf.debugging.check_numerics(roberta_outputs.last_hidden_state, "Invalid values in last_hidden_state")
 
 
 # x1 = tf.keras.layers.Dropout(0.1)(roberta_model)
-x1 = tf.keras.layers.Conv1D(filters=768, kernel_size=2,padding='same')(roberta_outputs.last_hidden_state)
+x1 = tf.keras.layers.Conv1D(filters=128, kernel_size=3,padding='same')(roberta_outputs.last_hidden_state)
 x1 = tf.keras.layers.LeakyReLU()(x1)
 x1 = tf.keras.layers.Dense(1)(x1)
 x1 = tf.keras.layers.Flatten()(x1)
@@ -68,13 +77,13 @@ model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=output)
 
 # %%
 model.compile(
-    optimizer='adam',
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
     # loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     loss='sparse_categorical_crossentropy',
     metrics=["accuracy"]
 )
 
 # %%
-model.fit(dataset, epochs=3)
+model.fit(dataset)
 
 
