@@ -4,17 +4,19 @@ import transformers
 import data
 
 
-# physical_devices = tf.config.list_physical_devices('GPU')
-# if len(physical_devices) > 0:
-#     print(physical_devices[0])
-#     tf.config.experimental.set_memory_growth(physical_devices[0], True) 
-# else:
-#     exit(0)
+physical_devices = tf.config.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    print(physical_devices[0])
+    tf.config.experimental.set_memory_growth(physical_devices[0], True) 
+else:
+    print("##### GPU not found #####")
+    print("using CPU")
     
 # %%
 import os
-os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
+# os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ['XLA_FLAGS']="/home/dayan/anaconda3/pkgs/cuda-nvvm-tools-12.4.131-h6a678d5_0/nvvm"
 
 # %%
 model_name = "FacebookAI/roberta-base"
@@ -42,6 +44,7 @@ type(train_enc)
 
 # %%
 dataset = tf.data.Dataset.from_tensor_slices((dict(train_enc), y_train))
+test_dataset = tf.data.Dataset.from_tensor_slices((dict(train_enc), y_train))
 
 # # %%
 # dataset.element_spec[0]['input_ids'].
@@ -70,20 +73,33 @@ x1 = tf.keras.layers.Conv1D(filters=128, kernel_size=3,padding='same')(roberta_o
 x1 = tf.keras.layers.LeakyReLU()(x1)
 x1 = tf.keras.layers.Dense(1)(x1)
 x1 = tf.keras.layers.Flatten()(x1)
-output = tf.keras.layers.Activation('softmax')(x1)
+# x1 = tf.keras.layers.Activation('softmax')(x1)
+output = tf.keras.layers.Dense(1, activation="softmax")(x1)
 
 # %%
 model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=output)
+print(model.summary())
 
 # %%
 model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
     # loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     loss='sparse_categorical_crossentropy',
-    metrics=["accuracy"]
+    metrics=[
+        tf.keras.metrics.BinaryAccuracy(), 
+        # tf.keras.metrics.FalseNegatives(),
+        # tf.keras.metrics.Precision(),
+        # tf.keras.metrics.Recall(),
+        # tf.keras.metrics.binary_crossentropy(),
+    ]
 )
 
 # %%
-model.fit(dataset)
+# model.fit(dataset, epochs=5)
+out = model.fit(dataset)
+# results = model.evaluate(x_test, y_test, batch_size=128)
+print(out.history)
+# print("test results: ", results)
+model.save("sarc_detect.keras")
 
 
