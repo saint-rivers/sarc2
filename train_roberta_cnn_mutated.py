@@ -39,7 +39,20 @@ def remove_stopwords(text):
 # reddit_train = reddit_train[['text', 'sarcastic', 'source']]
 
 # df = pd.concat([reddit_train, twitter_train],axis=0, ignore_index=True)
-df = pd.read_csv('data/mydata/mutated_twitter_reddit.csv')
+
+
+## mutated
+# df = pd.read_csv('data/mydata/mutated_twitter_reddit.csv')
+
+## merged
+# df = pd.read_csv('data/mydata/twitter_reddit_merge.csv')
+
+## headlines
+# df = pd.read_csv('data/huff_onion/headline_train.csv')
+
+## isarcasm
+df = pd.read_csv('data/isarcasm/isarc_train.csv')
+
 
 # %%
 from sklearn.utils import resample
@@ -79,18 +92,22 @@ train_dataset = train_dataset.shuffle(len(y_train)).batch(batch_size).prefetch(t
 test_dataset = test_dataset.shuffle(len(y_test)).batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
 # %%
-config = transformers.BertConfig.from_pretrained(model_name,
-                                    output_hidden_states=True)
+config = transformers.BertConfig.from_pretrained(model_name, output_hidden_states=True)
 roberta_model = transformers.TFRobertaModel.from_pretrained(model_name, config=config)
 input_ids = tf.keras.Input(shape=(128,), dtype=tf.int32, name="input_ids")
 attention_mask = tf.keras.Input(shape=(128,), dtype=tf.int32, name="attention_mask")
 roberta_outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
 
+
+# x1 = tf.keras.layers.Flatten()(roberta_outputs.last_hidden_state)
+# x1 = tf.keras.layers.Dense(512, activation="tanh")(x1)
+# x1 = tf.keras.layers.Dropout(0.5)(x1)
+
 x1 = tf.keras.layers.Dropout(0.1)(roberta_outputs.last_hidden_state)
 x1 = tf.keras.layers.Conv1D(filters=128, kernel_size=3,padding='same')(x1)
 x1 = tf.keras.layers.LeakyReLU()(x1)
 x1 = tf.keras.layers.GlobalMaxPooling1D()(x1)
-output = tf.keras.layers.Dense(1, activation="softmax")(x1)
+output = tf.keras.layers.Dense(1, activation="sigmoid")(x1)
 model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=output)
 print(model.summary())
 
@@ -112,7 +129,9 @@ model.compile(
     metrics=[
         tf.keras.metrics.BinaryAccuracy(), 
         tf.keras.metrics.FalseNegatives(),
+        tf.keras.metrics.TrueNegatives(),
         tf.keras.metrics.FalsePositives(),
+        tf.keras.metrics.TruePositives(),
         tf.keras.metrics.BinaryCrossentropy(),
         f1_score
     ]
@@ -121,15 +140,15 @@ model.compile(
 
 # %%
 # model.fit(dataset, epochs=5)
-out = model.fit(train_dataset, epochs=20)
+out = model.fit(train_dataset, epochs=3)
 results = model.evaluate(test_dataset, batch_size=128)
 print(out.history)
 print("eval")
 print(results)
 
 import json
-with open("results/roberta_cnn.json", "w+") as file:
-    file.write(json.dumps(out.history))
+with open("results/roberta.json", "w+") as file:
+    file.write(json.dumps({'train': out.history, 'eval': results}))
 
 model.save("output/sarc_detect_2.keras")
 
