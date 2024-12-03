@@ -41,8 +41,8 @@ def remove_stopwords(text):
 # df = pd.concat([reddit_train, twitter_train],axis=0, ignore_index=True)
 
 
-## mutated
-# df = pd.read_csv('data/mydata/mutated_twitter_reddit.csv')
+# mutated
+df = pd.read_csv('data/mydata/mutated_twitter_reddit.csv')
 
 ## merged
 # df = pd.read_csv('data/mydata/twitter_reddit_merge.csv')
@@ -51,7 +51,7 @@ def remove_stopwords(text):
 # df = pd.read_csv('data/huff_onion/headline_train.csv')
 
 ## isarcasm
-df = pd.read_csv('data/isarcasm/isarc_train.csv')
+# df = pd.read_csv('data/isarcasm/isarc_train.csv')
 
 
 # %%
@@ -67,6 +67,7 @@ df = pd.concat([majority_class, minority_upsampled])
 
 # %%
 from sklearn.model_selection import train_test_split
+df = df.sample(n=20000)
 x_train, x_test, y_train, y_test = train_test_split(df['text'], df['sarcastic'], stratify=df['sarcastic'], test_size=0.2, random_state=42)
 
 # %%
@@ -87,7 +88,7 @@ test_enc = tokenize_function(x_test.astype(str).values.tolist())
 train_dataset = tf.data.Dataset.from_tensor_slices((dict(train_enc), y_train))
 test_dataset = tf.data.Dataset.from_tensor_slices((dict(test_enc), y_test))
 
-batch_size = 16
+batch_size = 8
 train_dataset = train_dataset.shuffle(len(y_train)).batch(batch_size).prefetch(tf.data.AUTOTUNE)
 test_dataset = test_dataset.shuffle(len(y_test)).batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
@@ -140,14 +141,14 @@ model.compile(
 
 # %%
 # model.fit(dataset, epochs=5)
-out = model.fit(train_dataset, epochs=3)
+out = model.fit(train_dataset, epochs=10)
 results = model.evaluate(test_dataset, batch_size=128)
 print(out.history)
 print("eval")
 print(results)
 
 import json
-with open("results/roberta.json", "w+") as file:
+with open("results/roberta_cnn_mutated-8.json", "w+") as file:
     file.write(json.dumps({'train': out.history, 'eval': results}))
 
 model.save("output/sarc_detect_2.keras")
